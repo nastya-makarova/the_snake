@@ -32,7 +32,7 @@ SNAKE_COLOR = (0, 255, 0)
 BORDER_GRID_COLOR = (128, 128, 128)
 
 # Скорость движения змейки:
-SPEED = 10
+SPEED = 20
 
 # Настройка игрового окна:
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), 0, 32)
@@ -123,6 +123,7 @@ class Snake(GameObject):
     def __init__(self):
         super().__init__()
         self.reset()
+        self.body_color = SNAKE_COLOR
         self.direction = RIGHT
 
     def update_direction(self):
@@ -177,7 +178,6 @@ class Snake(GameObject):
         self.length = 1
         self.positions = [FIELD_CENTRE]
         self.next_direction = None
-        self.body_color = SNAKE_COLOR
         self.last = None
         self.direction = choice(DIRECTIONS)
 
