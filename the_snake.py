@@ -7,6 +7,7 @@ SCREEN_WIDTH, SCREEN_HEIGHT = 640, 480
 GRID_SIZE = 20
 GRID_WIDTH = SCREEN_WIDTH // GRID_SIZE
 GRID_HEIGHT = SCREEN_HEIGHT // GRID_SIZE
+FIELD_CENTRE = ((SCREEN_WIDTH // 2), (SCREEN_HEIGHT // 2))
 
 # Направления движения:
 UP = (0, -1)
@@ -31,13 +32,13 @@ SNAKE_COLOR = (0, 255, 0)
 BORDER_GRID_COLOR = (128, 128, 128)
 
 # Скорость движения змейки:
-SPEED = 3
+SPEED = 10
 
 # Настройка игрового окна:
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), 0, 32)
 
 # Заголовок окна игрового поля:
-pygame.display.set_caption('Змейка')
+pygame.display.set_caption('Игра Змейка. Для выхода из игры нажмите крестик.')
 
 # Настройка времени:
 clock = pygame.time.Clock()
@@ -80,12 +81,11 @@ class GameObject:
     """Базовый класс"""
 
     def __init__(self):
-        self.position = ((SCREEN_WIDTH // 2), (SCREEN_HEIGHT // 2))
+        self.position = FIELD_CENTRE
         self.body_color = None
 
     def draw(self):
         """Метод отрисовки объекта на игровом поле."""
-        pass
 
 
 class Apple(GameObject):
@@ -97,6 +97,9 @@ class Apple(GameObject):
         """Метод устанавливает случайное положение яблока на игровом поле."""
         self.random_position = (randint(0, GRID_WIDTH - 1) * GRID_SIZE,
                                 randint(0, GRID_HEIGHT - 1) * GRID_SIZE)
+        while self.random_position == FIELD_CENTRE:
+            self.random_position = (randint(0, GRID_WIDTH - 1) * GRID_SIZE,
+                                    randint(0, GRID_HEIGHT - 1) * GRID_SIZE)
         return self.random_position
 
     def __init__(self):
@@ -118,12 +121,8 @@ class Snake(GameObject):
 
     def __init__(self):
         super().__init__()
-        self.length = 1
-        self.positions = [self.position]
+        self.reset()
         self.direction = RIGHT
-        self.next_direction = None
-        self.body_color = SNAKE_COLOR
-        self.last = None
 
     def update_direction(self):
         """Метод обновляет направление движения змейки."""
@@ -139,7 +138,8 @@ class Snake(GameObject):
             pygame.draw.rect(screen, BORDER_COLOR, rect.inflate(1, 1), 1)
 
         # Отрисовка головы змейки
-        head_rect = pygame.Rect(self.positions[0], (GRID_SIZE, GRID_SIZE))
+        head_rect = pygame.Rect(self.get_head_position(),
+                                (GRID_SIZE, GRID_SIZE))
         pygame.draw.rect(screen, self.body_color, head_rect)
         pygame.draw.rect(screen, BORDER_COLOR, head_rect.inflate(1, 1), 1)
 
@@ -153,42 +153,31 @@ class Snake(GameObject):
 
     def get_head_position(self):
         """Метод возвращает позицию головы змейки."""
-        head_position = self.positions[0]
-        return head_position
+        return self.positions[0]
 
     def move(self):
         """Метод обновляет позицию змейки."""
-        head = self.get_head_position()
+        head_x, head_y = self.get_head_position()
+        direction_x, direction_y = self.direction
 
-        if head[1] == 0 and self.direction == UP:
-            list.insert(self.positions, 0,
-                        (head[0], SCREEN_HEIGHT - GRID_SIZE))
-        elif head[1] == SCREEN_HEIGHT - GRID_SIZE and self.direction == DOWN:
-            list.insert(self.positions, 0, (head[0], 0))
-        elif head[0] == 0 and self.direction == LEFT:
-            list.insert(self.positions, 0, (SCREEN_WIDTH - GRID_SIZE, head[1]))
-        elif head[0] == SCREEN_WIDTH - GRID_SIZE and self.direction == RIGHT:
-            list.insert(self.positions, 0, (0, head[1]))
-        else:
-            list.insert(self.positions, 0,
-                        ((head[0] + self.direction[0] * GRID_SIZE),
-                         (head[1] + self.direction[1] * GRID_SIZE)))
-
-        for position in self.positions[2:]:
-            if head == position:
-                self.reset()
+        list.insert(self.positions, 0,
+                    ((head_x + direction_x * GRID_SIZE) % SCREEN_WIDTH,
+                     (head_y + direction_y * GRID_SIZE) % SCREEN_HEIGHT))
 
         if self.length == len(self.positions):
             self.last = None
         else:
-            self.last = list.pop(self.positions, -1)
+            self.last = self.positions.pop()
 
     def reset(self):
         """Метод сбрасывает змейку в начальное состояние"""
         """после столкновения с собой."""
         draw_lines()
         self.length = 1
-        self.positions = [self.position]
+        self.positions = [FIELD_CENTRE]
+        self.next_direction = None
+        self.body_color = SNAKE_COLOR
+        self.last = None
         self.direction = choice(DIRECTIONS)
 
 
@@ -207,14 +196,9 @@ def handle_keys(game_object):
                 game_object.next_direction = LEFT
             elif event.key == pygame.K_RIGHT and game_object.direction != LEFT:
                 game_object.next_direction = RIGHT
-
-
-def create_apple(snake):
-    """Функция создания яблока с корректными координатами."""
-    apple = Apple()
-    while apple.position in snake.positions:
-        apple = Apple()
-    return apple
+            elif event.key == pygame.K_ESCAPE:
+                pygame.quit()
+                raise SystemExit
 
 
 def main():
@@ -223,10 +207,7 @@ def main():
     pygame.init()
     draw_lines()
     snake = Snake()
-    apple = create_apple(snake)
-    snake.draw()
-    apple.draw()
-    pygame.display.update()
+    apple = Apple()
 
     while True:
 
@@ -239,15 +220,16 @@ def main():
 
         if snake.get_head_position() == apple.position:
             snake.length += 1
-            apple = create_apple(snake)
-            apple.draw()
+            while apple.position in snake.positions:
+                apple.position = apple.randomize_position()
 
-        if snake.positions[0] in snake.positions[2:]:
+        if snake.get_head_position() in snake.positions[2:]:
             screen.fill(BOARD_BACKGROUND_COLOR)
-            apple = create_apple(snake)
-            apple.draw()
+            snake.reset()
+            apple.position = apple.randomize_position()
 
         snake.move()
+        apple.draw()
         snake.draw()
 
         pygame.display.update()
