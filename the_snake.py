@@ -38,7 +38,8 @@ SPEED = 10
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), 0, 32)
 
 # Заголовок окна игрового поля:
-pygame.display.set_caption('Игра Змейка. Для выхода из игры нажмите крестик.')
+pygame.display.set_caption('Игра Змейка. '
+                           'Для выхода из игры нажмите крестик или ESC.')
 
 # Настройка времени:
 clock = pygame.time.Clock()
@@ -93,11 +94,11 @@ class Apple(GameObject):
 
     """описывающий яблоко и действия с ним."""
 
-    def randomize_position(self):
+    def randomize_position(self, forbidden_list=FIELD_CENTRE):
         """Метод устанавливает случайное положение яблока на игровом поле."""
         self.random_position = (randint(0, GRID_WIDTH - 1) * GRID_SIZE,
                                 randint(0, GRID_HEIGHT - 1) * GRID_SIZE)
-        while self.random_position == FIELD_CENTRE:
+        while self.random_position in forbidden_list:
             self.random_position = (randint(0, GRID_WIDTH - 1) * GRID_SIZE,
                                     randint(0, GRID_HEIGHT - 1) * GRID_SIZE)
         return self.random_position
@@ -205,7 +206,7 @@ def main():
     """Основной цикл игры."""
     # Инициализация PyGame:
     pygame.init()
-    draw_lines()
+
     snake = Snake()
     apple = Apple()
 
@@ -220,15 +221,15 @@ def main():
 
         if snake.get_head_position() == apple.position:
             snake.length += 1
-            while apple.position in snake.positions:
-                apple.position = apple.randomize_position()
+            apple.position = apple.randomize_position(snake.positions)
 
         if snake.get_head_position() in snake.positions[2:]:
             screen.fill(BOARD_BACKGROUND_COLOR)
             snake.reset()
-            apple.position = apple.randomize_position()
+            apple.position = apple.randomize_position(snake.positions)
 
         snake.move()
+
         apple.draw()
         snake.draw()
 
