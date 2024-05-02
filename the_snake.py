@@ -174,7 +174,6 @@ class Snake(GameObject):
     def reset(self):
         """Метод сбрасывает змейку в начальное состояние"""
         """после столкновения с собой."""
-        draw_lines()
         self.length = 1
         self.positions = [FIELD_CENTRE]
         self.next_direction = None
